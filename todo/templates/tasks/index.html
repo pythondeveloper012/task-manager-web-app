@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Tasks App — Login / Register / Tasks (Single File)</title>
+  <style>
+    /* -------------------
+       Simple stylish CSS
+       ------------------- */
+    :root{
+      --bg:#f5f7fb;
+      --card:#ffffff;
+      --muted:#6b7280;
+      --accent:#4f46e5;
+      --danger:#ef4444;
+      --success:#10b981;
+    }
+    *{box-sizing:border-box;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;}
+    body{margin:0;background:linear-gradient(180deg,#eef2ff 0%,var(--bg) 100%);color:#111;}
+    .app{min-height:100vh;display:flex;flex-direction:column;}
+    .topbar{display:flex;justify-content:space-between;align-items:center;padding:18px 24px;background:transparent;}
+    .topbar h1{margin:0;font-size:20px;color:var(--accent);letter-spacing:0.4px;}
+    .container{width:92%;max-width:980px;margin:18px auto;flex:1;}
+    .card{background:var(--card);border-radius:14px;padding:18px;box-shadow:0 6px 20px rgba(15,23,42,0.06);}
+    .auth-card{max-width:520px;margin:10px auto;}
+    .tabs{display:flex;gap:8px;margin-bottom:12px;}
+    .tab{flex:1;padding:10px;border-radius:10px;background:transparent;border:1px solid transparent;cursor:pointer;color:var(--muted);}
+    .tab.active{background:linear-gradient(90deg,#eef2ff,#f8f5ff);border-color:rgba(79,70,229,0.12);color:var(--accent);font-weight:600;}
+    .form input, .form textarea{width:100%;padding:10px 12px;margin-bottom:10px;border-radius:8px;border:1px solid #e6e9ef;background:#fff;}
+    .form textarea{min-height:80px;resize:vertical;}
+    .btn{background:var(--accent);color:#fff;padding:10px 14px;border-radius:10px;border:none;cursor:pointer;font-weight:600;}
+    .btn.small{padding:8px 10px;font-size:13px;background:#e9e8ff;color:var(--accent);border:1px solid rgba(79,70,229,0.06);}
+    .hidden{display:none;}
+    .error{color:var(--danger);margin-bottom:8px;font-size:14px;}
+    .success{color:var(--success);margin-bottom:8px;font-size:14px;}
+    .tasks-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+    .tasks-list{display:flex;flex-direction:column;gap:12px;}
+    .task-item{display:flex;justify-content:space-between;gap:12px;padding:12px;border-radius:10px;border:1px solid #f1f5f9;background:linear-gradient(180deg,#ffffff,#fbfdff);}
+    .task-left{flex:1;}
+    .task-title{font-weight:700;margin-bottom:6px;}
+    .task-desc{color:var(--muted);font-size:14px;margin-bottom:6px;}
+    .task-meta{font-size:12px;color:#94a3b8;}
+    .task-actions button{margin-left:8px;padding:6px 8px;border-radius:8px;border:none;cursor:pointer;}
+    .edit-btn{background:#fde68a;color:#92400e;}
+    .delete-btn{background:#fecaca;color:#7f1d1d;}
+    .footer{text-align:center;padding:14px;color:#94a3b8;font-size:13px;}
+    .user-area{display:flex;gap:10px;align-items:center;}
+    .user-area span{color:#374151;font-weight:600;margin-right:6px;}
+    @media (max-width:640px){
+      .tasks-top{flex-direction:column;gap:8px;align-items:flex-start;}
+    }
+    /* small helpers */
+    .muted{color:var(--muted);font-size:14px}
+    .center{display:flex;justify-content:center;align-items:center}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <h1>Todo • Tasks</h1>
+      <div id="user-area" class="user-area hidden">
+        <span id="username-display">User</span>
+        <button id="logout-btn" class="btn small">Logout</button>
+      </div>
+    </header>
+
+    <main class="container">
+      <!-- AUTH -->
+      <section id="auth-section" class="card auth-card">
+        <div class="tabs">
+          <button id="tab-login" class="tab active">Login</button>
+          <button id="tab-register" class="tab">Register</button>
+        </div>
+
+        <div id="login-form" class="form">
+          <h2>Login</h2>
+          <div id="login-error" class="error"></div>
+          <input id="login-username" placeholder="Username" autocomplete="username" />
+          <input id="login-password" type="password" placeholder="Password" autocomplete="current-password" />
+          <div style="display:flex;gap:8px;align-items:center">
+            <button id="login-btn" class="btn">Login</button>
+            <div class="muted" style="margin-left:8px">or use <strong>/users/token/</strong></div>
+          </div>
+        </div>
+
+        <div id="register-form" class="form hidden">
+          <h2>Register</h2>
+          <div id="register-error" class="error"></div>
+          <input id="reg-username" placeholder="Username" autocomplete="username" />
+          <input id="reg-email" placeholder="Email" autocomplete="email" />
+          <input id="reg-password" type="password" placeholder="Password" autocomplete="new-password" />
+          <button id="register-btn" class="btn">Register</button>
+        </div>
+      </section>
+
+      <!-- TASKS -->
+      <section id="tasks-section" class="card hidden">
+        <div class="tasks-top">
+          <h2>Your Tasks</h2>
+          <div>
+            <button id="refresh-btn" class="btn small">Refresh</button>
+            <button id="new-task-toggle" class="btn small">New Task</button>
+          </div>
+        </div>
+
+        <div id="new-task-form" class="form hidden">
+          <input id="task-title" placeholder="Title" />
+          <textarea id="task-desc" placeholder="Description"></textarea>
+          <input id="task-due" type="date" />
+          <button id="create-task-btn" class="btn">Create Task</button>
+        </div>
+
+        <div id="tasks-list" class="tasks-list"></div>
+      </section>
+    </main>
+
+    <footer class="footer">Demo • Update <code>BASE_URL</code> inside the file if needed</footer>
+  </div>
+
+  <script>
+  /*
+    Single-file app JS (Roman English instructions here)
+
+    1) Set BASE_URL if your Django backend is on a different origin.
+       Example: const BASE_URL = 'http://127.0.0.1:8000'
+       Default is '' (same origin).
+
+    2) Expected endpoints (adjust if your backend uses different paths):
+       - POST  BASE_URL + '/users/register/'         -> register
+       - POST  BASE_URL + '/users/token/'            -> login (returns {access, refresh})
+       - POST  BASE_URL + '/users/token/refresh/'    -> refresh (body: {refresh})
+       - GET   BASE_URL + '/users/'                  -> list tasks
+       - POST  BASE_URL + '/users/'                  -> create task
+       - PATCH BASE_URL + '/users/<id>/'             -> update
+       - DELETE BASE_URL + '/users/<id>/'            -> delete
+       - optional: POST BASE_URL + '/users/logout/'  -> blacklist refresh
+
+    3) If frontend runs on different domain, enable CORS on Django.
+    4) This demo uses localStorage for tokens (simple). For production prefer httpOnly cookies.
+  */
+
+  const BASE_URL = ''; // change to 'http://127.0.0.1:8000' if backend is different
+
+  // token helpers
+  const tokenStore = {
+    get(){ return { access: localStorage.getItem('access'), refresh: localStorage.getItem('refresh') }; },
+    set({access, refresh}){ if(access) localStorage.setItem('access', access); if(refresh) localStorage.setItem('refresh', refresh); },
+    clear(){ localStorage.removeItem('access'); localStorage.removeItem('refresh'); }
+  };
+
+  // fetch wrapper with refresh-on-401
+  async function apiFetch(path, opts = {}){
+    const url = BASE_URL + path;
+    const tokens = tokenStore.get();
+    opts.headers = opts.headers || {};
+    if(tokens.access) opts.headers['Authorization'] = 'Bearer ' + tokens.access;
+    if(!(opts.body instanceof FormData)) opts.headers['Content-Type'] = opts.headers['Content-Type'] || 'application/json';
+
+    let res = await fetch(url, opts);
+    if(res.status === 401){
+      // try refresh
+      if(tokens.refresh){
+        const r = await fetch(BASE_URL + '/users/token/refresh/', {
+          method:'POST',
+          headers:{ 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refresh: tokens.refresh })
+        });
+        if(r.ok){
+          const d = await r.json();
+          tokenStore.set({ access: d.access });
+          // retry original
+          opts.headers['Authorization'] = 'Bearer ' + d.access;
+          res = await fetch(url, opts);
+        } else {
+          tokenStore.clear();
+          showLoggedOutState();
+        }
+      }
+    }
+    return res;
+  }
+
+  // DOM refs
+  const $ = sel => document.querySelector(sel);
+  const show = el => el.classList.remove('hidden');
+  const hide = el => el.classList.add('hidden');
+
+  const authSection = $('#auth-section');
+  const tasksSection = $('#tasks-section');
+  const loginForm = $('#login-form');
+  const registerForm = $('#register-form');
+  const tabLogin = $('#tab-login');
+  const tabRegister = $('#tab-register');
+  const loginErr = $('#login-error');
+  const regErr = $('#register-error');
+  const userArea = $('#user-area');
+  const usernameDisplay = $('#username-display');
+  const tasksList = $('#tasks-list');
+  const newTaskToggle = $('#new-task-toggle');
+  const newTaskForm = $('#new-task-form');
+
+  // tabs
+  tabLogin.addEventListener('click', ()=> { tabLogin.classList.add('active'); tabRegister.classList.remove('active'); hide(registerForm); show(loginForm); });
+  tabRegister.addEventListener('click', ()=> { tabRegister.classList.add('active'); tabLogin.classList.remove('active'); hide(loginForm); show(registerForm); });
+
+  // register
+  $('#register-btn').addEventListener('click', async () => {
+    regErr.textContent = '';
+    const username = $('#reg-username').value.trim();
+    const email = $('#reg-email').value.trim();
+    const password = $('#reg-password').value;
+    if(!username || !email || !password){ regErr.textContent = 'All fields required'; return; }
+    try{
+      const res = await fetch(BASE_URL + '/users/register/', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ username, email, password })
+      });
+      const data = await res.json();
+      if(!res.ok){
+        regErr.textContent = (data && typeof data === 'object') ? Object.values(data)[0] || JSON.stringify(data) : (data.detail || 'Registration failed');
+        return;
+      }
+      alert('Registered successfully — please login');
+      // switch to login
+      tabLogin.click();
+    }catch(e){
+      regErr.textContent = 'Network error';
+    }
+  });
+
+  // login
+  $('#login-btn').addEventListener('click', async () => {
+    loginErr.textContent = '';
+    const username = $('#login-username').value.trim();
+    const password = $('#login-password').value;
+    if(!username || !password){ loginErr.textContent = 'Enter username and password'; return; }
+    try{
+      const res = await fetch(BASE_URL + '/users/token/', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ username, password })
+      });
+      const data = await res.json();
+      if(!res.ok){
+        loginErr.textContent = data.detail || (data && Object.values(data)[0]) || 'Login failed';
+        return;
+      }
+      tokenStore.set({ access: data.access, refresh: data.refresh });
+      usernameDisplay.textContent = username;
+      showLoggedInState();
+      loadTasks();
+    }catch(e){
+      loginErr.textContent = 'Network error';
+    }
+  });
+
+  // logout
+  $('#logout-btn').addEventListener('click', async () => {
+    const tokens = tokenStore.get();
+    if(tokens.refresh){
+      try{
+        // optional logout endpoint to blacklist refresh token on server
+        await fetch(BASE_URL + '/users/logout/', {
+          method:'POST',
+          headers:{'Content-Type':'application/json', 'Authorization': 'Bearer ' + (tokens.access || '')},
+          body: JSON.stringify({ refresh: tokens.refresh })
+        });
+      }catch(e){}
+    }
+    tokenStore.clear();
+    showLoggedOutState();
+  });
+
+  // UI state
+  function showLoggedInState(){
+    hide(authSection);
+    show(tasksSection);
+    show(userArea);
+  }
+  function showLoggedOutState(){
+    show(authSection);
+    hide(tasksSection);
+    hide(userArea);
+    tabLogin.click();
+  }
+
+  // tasks handlers
+  $('#refresh-btn').addEventListener('click', loadTasks);
+  newTaskToggle.addEventListener('click', ()=> newTaskForm.classList.toggle('hidden'));
+
+  async function loadTasks(){
+    tasksList.innerHTML = '<div class="center muted">Loading...</div>';
+    try{
+      const res = await apiFetch('/users/');
+      if(res.status === 401){ showLoggedOutState(); return; }
+      if(!res.ok){
+        const d = await res.json();
+        tasksList.innerHTML = '<div class="task-item">Error: ' + (d.detail || JSON.stringify(d)) + '</div>';
+        return;
+      }
+      const data = await res.json();
+      renderTasks(data);
+    }catch(e){
+      tasksList.innerHTML = '<div class="task-item">Network error</div>';
+    }
+  }
+
+  function renderTasks(items){
+    if(!items || items.length === 0){ tasksList.innerHTML = '<div class="task-item">No tasks found.</div>'; return; }
+    tasksList.innerHTML = '';
+    items.forEach(it => {
+      const el = document.createElement('div');
+      el.className = 'task-item';
+      el.innerHTML = `
+        <div class="task-left">
+          <div class="task-title">${escapeHtml(it.title || '')}</div>
+          <div class="task-desc">${escapeHtml(it.description || '')}</div>
+          <div class="task-meta">Due: ${it.due_date || '—'}</div>
+        </div>
+        <div class="task-actions">
+          <button class="edit-btn">Edit</button>
+          <button class="delete-btn">Delete</button>
+        </div>
+      `;
+      tasksList.appendChild(el);
+
+      el.querySelector('.delete-btn').addEventListener('click', ()=> deleteTask(it.id));
+      el.querySelector('.edit-btn').addEventListener('click', ()=> openEditModal(it));
+    });
+  }
+
+  // create
+  $('#create-task-btn').addEventListener('click', async () => {
+    const title = $('#task-title').value.trim();
+    const description = $('#task-desc').value.trim();
+    const due_date = $('#task-due').value || null;
+    if(!title){ alert('Title required'); return; }
+    try{
+      const res = await apiFetch('/users/', {
+        method:'POST',
+        body: JSON.stringify({ title, description, due_date })
+      });
+      if(!res.ok){ const d = await res.json(); alert('Create failed: ' + (d.detail || JSON.stringify(d))); return; }
+      $('#task-title').value=''; $('#task-desc').value=''; $('#task-due').value='';
+      newTaskForm.classList.add('hidden');
+      loadTasks();
+    }catch(e){ alert('Network error'); }
+  });
+
+  // delete
+  async function deleteTask(id){
+    if(!confirm('Delete this task?')) return;
+    try{
+      const res = await apiFetch(`/users/${id}/`, { method:'DELETE' });
+      if(res.status === 204){ loadTasks(); return; }
+      const d = await res.json(); alert('Delete failed: ' + (d.detail || JSON.stringify(d)));
+    }catch(e){ alert('Network error'); }
+  }
+
+  // edit via prompts (simple demo)
+  function openEditModal(item){
+    const title = prompt('Title', item.title);
+    if(title === null) return;
+    const desc = prompt('Description', item.description || '');
+    if(desc === null) return;
+    const due = prompt('Due date (YYYY-MM-DD)', item.due_date || '');
+    if(due === null) return;
+    saveEdit(item.id, { title, description: desc, due_date: due || null });
+  }
+
+  async function saveEdit(id, data){
+    try{
+      const res = await apiFetch(`/users/${id}/`, { method:'PATCH', body: JSON.stringify(data) });
+      if(!res.ok){ const d = await res.json(); alert('Update failed: ' + (d.detail || JSON.stringify(d))); return; }
+      loadTasks();
+    }catch(e){ alert('Network error'); }
+  }
+
+  // helpers
+  function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]); }
+
+  // boot - check tokens
+  (function init(){
+    const tokens = tokenStore.get();
+    if(tokens.access){
+      // optionally show username (if you want real username show, call an endpoint e.g. /users/me/)
+      usernameDisplay.textContent = 'User';
+      showLoggedInState();
+      loadTasks();
+    } else {
+      showLoggedOutState();
+    }
+  })();
+  </script>
+</body>
+</html>
